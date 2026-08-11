@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>二手电动车自助选车</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚲</text></svg>">
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<style>
+:root{
+  --bg:#f4f7f5;--fg:#1e293b;--card:#fff;--primary:#2d7a5f;--primary-fg:#fff;
+  --secondary:#e2efe8;--secondary-fg:#1f5e47;--muted:#64748b;--border:#e2e8e5;
+  --price:#e85d2a;--destructive:#ef4444;--success:#16a34a;--info:#3b82f6;
+  --radius:8px;--font:'Noto Sans SC',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--bg);color:var(--fg);-webkit-font-smoothing:antialiased;padding-bottom:64px}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer;border:none;background:none}
+input,select,textarea{font-family:inherit;font-size:14px}
+
+/* 通用按钮 */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:var(--radius);font-size:14px;font-weight:500;border:1px solid transparent;transition:all .15s;white-space:nowrap;padding:0 12px;height:36px}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{filter:brightness(.93)}
+.btn-secondary{background:var(--secondary);color:var(--secondary-fg)}
+.btn-secondary:hover{background:#d4e7dc}
+.btn-destructive{background:var(--destructive);color:#fff}
+.btn-price{background:var(--price);color:#fff}
+.btn-price:hover{filter:brightness(.92)}
+.btn-ghost{background:transparent;color:var(--fg)}
+.btn-ghost:hover{background:var(--secondary)}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--fg)}
+.btn-sm{height:32px;padding:0 10px;font-size:13px}
+.btn-lg{height:44px;padding:0 18px;font-size:15px}
+.btn-icon{width:36px;height:36px;padding:0;border-radius:50%}
+.btn-block{width:100%}
+
+/* 输入框 */
+.input,.select,.textarea{width:100%;height:38px;padding:0 12px;border-radius:var(--radius);border:1px solid var(--border);background:#fafbfb;color:var(--fg);outline:none;transition:border-color .15s,box-shadow .15s}
+.input:focus,.select:focus,.textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(45,122,95,.12)}
+.textarea{height:auto;padding:8px 12px;resize:vertical;line-height:1.5}
+.label{display:block;font-size:12px;font-weight:500;margin-bottom:6px;color:var(--fg)}
+.select-wrap{position:relative}
+.select-wrap::after{content:'';position:absolute;right:12px;top:50%;width:6px;height:6px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:translateY(-70%) rotate(45deg);pointer-events:none}
+
+/* 徽章 */
+.badge{display:inline-flex;align-items:center;gap:3px;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:500;border:1px solid transparent}
+.badge-default{background:var(--primary);color:#fff}
+.badge-secondary{background:var(--secondary);color:var(--secondary-fg)}
+.badge-outline{background:transparent;border:1px solid var(--border);color:var(--fg)}
+.badge-success{background:var(--success);color:#fff}
+.badge-info{background:var(--info);color:#fff}
+.badge-click{cursor:pointer;transition:all .15s}
+.badge-click:hover{background:rgba(45,122,95,.1)}
+
+/* 卡片 */
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+
+/* 开关 */
+.switch{position:relative;width:40px;height:22px;border-radius:999px;background:#cbd5d1;cursor:pointer;transition:background .2s;flex-shrink:0}
+.switch.on{background:var(--primary)}
+.switch-dot{position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:transform .2s}
+.switch.on .switch-dot{transform:translateX(18px)}
+
+/* 滑块 */
+.slider{-webkit-appearance:none;appearance:none;width:100%;height:4px;background:#e2e8e5;border-radius:999px;outline:none}
+.slider::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--primary);cursor:pointer;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.slider::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--primary);cursor:pointer;border:2px solid #fff}
+
+/* 弹窗 */
+.modal-mask{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;animation:fadeIn .2s}
+.modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,.15);z-index:101;max-width:90vw;max-height:90vh;overflow-y:auto;animation:modalIn .2s;width:100%}
+@media(min-width:480px){.modal{max-width:420px}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes modalIn{from{opacity:0;transform:translate(-50%,-48%) scale(.98)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+
+/* Toast */
+.toast-wrap{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:9999;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none}
+.toast{padding:10px 16px;border-radius:8px;background:#1e293b;color:#fff;font-size:14px;box-shadow:0 4px 12px rgba(0,0,0,.15);animation:toastIn .3s;pointer-events:auto;max-width:90vw}
+.toast-success{background:var(--success);color:#fff}
+.toast-error{background:var(--destructive);color:#fff}
+@keyframes toastIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+
+/* 底部导航 */
+.tabbar{position:fixed;bottom:0;left:0;right:0;z-index:50;border-top:1px solid rgba(226,232,229,.6);background:rgba(255,255,255,.95);backdrop-filter:blur(12px);padding-bottom:env(safe-area-inset-bottom)}
+.tabbar-inner{max-width:448px;margin:0 auto;display:flex;padding:0 8px}
+.tab-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0;color:var(--muted);transition:color .2s;font-size:11px;font-weight:500}
+.tab-item.active{color:var(--primary)}
+.tab-item svg{width:22px;height:22px}
+
+/* 页面容器 */
+.page{min-height:100vh}
+.container{max-width:448px;margin:0 auto;padding:0 16px}
+.header{position:sticky;top:0;z-index:40;background:linear-gradient(to bottom,rgba(45,122,95,.08),rgba(255,255,255,.95),rgba(255,255,255,.8));backdrop-filter:blur(12px);border-bottom:1px solid rgba(226,232,229,.3)}
+.header-plain{background:rgba(255,255,255,.95)}
+
+/* 车辆卡片 */
+.vcard{border-radius:12px;border:1px solid rgba(226,232,229,.6);background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.04);transition:box-shadow .2s,transform .2s;cursor:pointer;overflow:hidden}
+.vcard:hover{box-shadow:0 4px 12px rgba(0,0,0,.08)}
+.vcard:active{transform:scale(.99)}
+.vcard-img{position:relative;aspect-ratio:4/3;width:100%;overflow:hidden;background:rgba(226,232,229,.5)}
+.vcard-img img{width:100%;height:100%;object-fit:cover;transition:transform .3s}
+.vcard:hover .vcard-img img{transform:scale(1.05)}
+.vcard-img .placeholder{display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);opacity:.4}
+.fav-btn{position:absolute;right:8px;top:8px;z-index:10;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.15);transition:all .15s;background:var(--secondary);color:var(--muted)}
+.fav-btn.on{background:var(--primary);color:#fff}
+.fav-btn.on svg{fill:currentColor}
+.badge-3c{position:absolute;left:8px;top:8px;display:flex;align-items:center;gap:3px;padding:2px 8px;border-radius:6px;background:rgba(22,163,74,.9);color:#fff;font-size:12px;font-weight:500;z-index:5}
+.vcard-body{padding:12px}
+.vcard-title{font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vcard-price{display:flex;align-items:baseline;gap:2px;margin-top:4px}
+.vcard-price .yuan{font-size:12px;color:var(--muted)}
+.vcard-price .num{font-size:24px;color:var(--price);font-weight:700;font-variant-numeric:tabular-nums}
+.vcard-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.vcard-desc{font-size:12px;color:var(--muted);margin-top:6px;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+
+/* 筛选面板 */
+.filter-panel{overflow:hidden;transition:max-height .3s,opacity .25s}
+.filter-panel.collapsed{max-height:0;opacity:0}
+.filter-panel.expanded{max-height:2000px;opacity:1;margin-bottom:12px}
+.filter-box{padding:16px;border-radius:12px;border:1px solid var(--border);background:#fff}
+.filter-row{margin-bottom:16px}
+.filter-row:last-child{margin-bottom:0}
+.filter-tags{display:flex;flex-wrap:wrap;gap:6px}
+
+/* 空状态 */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:64px 16px;text-align:center}
+.empty-icon{margin-bottom:16px;border-radius:50%;background:rgba(226,232,229,.5);padding:24px;color:rgba(100,116,139,.4)}
+.empty-icon svg{width:48px;height:48px;stroke-width:1.2}
+
+/* 底部提示 */
+.footer-tip{width:100%;padding:12px 16px;text-align:center;font-size:11px;color:rgba(100,116,139,.7);line-height:1.6}
+
+/* 后台列表 */
+.admin-item{display:flex;align-items:center;gap:12px;padding:12px;border-bottom:1px solid rgba(226,232,229,.6)}
+.admin-item:last-child{border-bottom:none}
+.admin-thumb{width:56px;height:56px;border-radius:8px;overflow:hidden;background:rgba(226,232,229,.5);flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.admin-thumb img{width:100%;height:100%;object-fit:cover}
+.admin-info{flex:1;min-width:0}
+.admin-name{font-weight:500;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.admin-price{font-size:14px;color:var(--price);font-weight:700;font-variant-numeric:tabular-nums;margin-top:2px}
+.admin-actions{display:flex;gap:4px;flex-shrink:0}
+
+/* 手风琴 */
+.accordion{border-bottom:1px solid var(--border)}
+.accordion:last-child{border-bottom:none}
+.accordion-head{display:flex;align-items:center;justify-content:space-between;width:100%;padding:12px 0;font-size:14px;font-weight:600;color:var(--fg)}
+.accordion-chevron{transition:transform .2s}
+.accordion.open .accordion-chevron{transform:rotate(180deg)}
+.accordion-body{overflow:hidden;transition:max-height .25s}
+
+/* 网格 */
+.grid{display:grid;gap:12px}
+.grid-2{grid-template-columns:repeat(2,1fr)}
+@media(min-width:480px){.grid-2{grid-template-columns:repeat(2,1fr)}}
+
+/* 详情弹窗 */
+.detail-img{position:relative;aspect-ratio:4/3;width:100%;overflow:hidden;background:rgba(226,232,229,.5)}
+.detail-img img{width:100%;height:100%;object-fit:cover}
+.detail-close{position:absolute;right:12px;top:12px;width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,.4);color:#fff;display:flex;align-items:center;justify-content:center;z-index:10}
+.detail-body{padding:20px}
+.detail-price-num{font-size:30px;color:var(--price);font-weight:700}
+.detail-params{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;padding:16px;border-radius:12px;border:1px solid var(--border);background:rgba(226,232,229,.3)}
+.detail-param{display:flex;align-items:center;gap:8px;font-size:13px}
+.detail-param .lbl{color:var(--muted)}
+.detail-param .val{font-weight:500}
+.detail-section{margin-top:16px}
+.detail-section h3{font-size:13px;font-weight:600;margin-bottom:8px}
+.detail-desc{font-size:13px;line-height:1.6;color:var(--muted);white-space:pre-line}
+.merchant-box{padding:16px;border-radius:12px;border:1px solid var(--border);background:#fff}
+.contact-box{padding:16px;border-radius:12px;border:1px solid rgba(45,122,95,.3);background:rgba(45,122,95,.05);margin-top:12px}
+.contact-tip{text-align:center;font-size:13px;font-weight:500;color:var(--primary);margin-bottom:12px}
+.contact-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:40px;border-radius:8px;font-size:14px;font-weight:600;color:#fff;background:var(--primary);margin-bottom:8px}
+.contact-btn.secondary{background:var(--secondary);color:var(--secondary-fg)}
+
+/* 二维码弹窗 */
+.qr-box{display:flex;flex-direction:column;align-items:center;padding:8px}
+.qr-code{border:4px solid rgba(45,122,95,.1);border-radius:12px;padding:12px;background:#fff}
+.qr-url{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);margin-top:8px;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* 登录页 */
+.login-wrap{display:flex;align-items:center;justify-content:center;min-height:80vh;padding:24px}
+.login-box{width:100%;max-width:320px;text-align:center}
+.login-icon{width:64px;height:64px;border-radius:16px;background:rgba(45,122,95,.1);color:var(--primary);display:flex;align-items:center;justify-content:center;margin:0 auto 24px}
+.login-title{font-size:20px;font-weight:700;margin-bottom:4px}
+.login-sub{font-size:14px;color:var(--muted);margin-bottom:24px}
+.login-pwd-wrap{position:relative;margin-bottom:16px}
+.login-pwd-wrap .input{height:48px;padding-right:40px;font-size:16px}
+.login-eye{position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--muted);display:flex}
+.login-hint{font-size:11px;color:rgba(100,116,139,.7);margin-top:16px}
+
+/* 工具类 */
+.flex{display:flex}.items-center{align-items:center}.justify-between{justify-content:space-between}.justify-center{justify-content:center}
+.flex-col{flex-direction:column}.flex-1{flex:1}.gap-1{gap:4px}.gap-2{gap:8px}.gap-3{gap:12px}.gap-4{gap:16px}
+.mt-1{margin-top:4px}.mt-2{margin-top:8px}.mt-3{margin-top:12px}.mt-4{margin-top:16px}
+.mb-1{margin-bottom:4px}.mb-2{margin-bottom:8px}.mb-3{margin-bottom:12px}.mb-4{margin-bottom:16px}
+.py-2{padding-top:8px;padding-bottom:8px}.py-3{padding-top:12px;padding-bottom:12px}.py-4{padding-top:16px;padding-bottom:16px}
+.px-4{padding-left:16px;padding-right:16px}.p-4{padding:16px}.p-5{padding:20px}
+.text-xs{font-size:12px}.text-sm{font-size:14px}.text-base{font-size:16px}.text-lg{font-size:18px}.text-xl{font-size:20px}
+.font-medium{font-weight:500}.font-semibold{font-weight:600}.font-bold{font-weight:700}
+.text-muted{color:var(--muted)}.text-primary{color:var(--primary)}.text-price{color:var(--price)}.text-destructive{color:var(--destructive)}
+.truncate{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tabular{font-variant-numeric:tabular-nums}
+.hidden{display:none!important}
+.divide-y>*+*{border-top:1px solid rgba(226,232,229,.6)}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+// ========== 工具函数 ==========
+function $(sel,root){return (root||document).querySelector(sel)}
+function $$(sel,root){return Array.from((root||document).querySelectorAll(sel))}
+function el(tag,attrs,children){
+  const e=document.createElement(tag);
+  if(attrs){for(const k in attrs){
+    if(k==='class')e.className=attrs[k];
+    else if(k==='style')e.style.cssText=attrs[k];
+    else if(k.startsWith('on')&&typeof attrs[k]==='function')e.addEventListener(k.slice(2).toLowerCase(),attrs[k]);
+    else if(k==='html')e.innerHTML=attrs[k];
+    else if(attrs[k]!==undefined&&attrs[k]!==null)e.setAttribute(k,attrs[k]);
+  }}
+  if(children){if(!Array.isArray(children))children=[children];children.forEach(c=>{if(c==null||c===false)return;if(typeof c==='string'||typeof c==='number')e.appendChild(document.createTextNode(c));else e.appendChild(c);});}
+  return e;
+}
+function svgIcon(name,size){
+  const icons={
+    bike:'<circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2"/><path d="M12 17.5V14l-3-3 4-3 2 3h3"/>',
+    heart:'<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>',
+    settings:'<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>',
+    search:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+    filter:'<polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>',
+    chevronDown:'<path d="m6 9 6 6 6-6"/>',
+    qrCode:'<rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/><path d="M12 16v.01"/><path d="M16 12h1"/><path d="M21 12v.01"/><path d="M12 21v-1"/>',
+    x:'<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+    plus:'<path d="M5 12h14"/><path d="M12 5v14"/>',
+    edit2:'<path d="M4 13.5V21h7.5L22 10.5l-7.5-7.5L4 13.5Z"/><path d="m14.5 6.5 3 3"/>',
+    trash2:'<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/>',
+    store:'<path d="M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9Z"/><path d="M3 9 5 4h14l2 5"/><path d="M13 13v4"/><path d="M11 17h2"/>',
+    database:'<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/>',
+    key:'<path d="m15.5 7.5 2.3 2.3a1 1 0 0 0 1.4 0l2.6-2.6a1 1 0 0 0 0-1.4l-2.3-2.3"/><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/>',
+    logout:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/>',
+    upload:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/>',
+    download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>',
+    rotateCcw:'<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>',
+    alertTriangle:'<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+    eye:'<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>',
+    eyeOff:'<path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/><path d="m2 2 20 20"/>',
+    image:'<rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>',
+    check:'<path d="M20 6 9 17l-5-5"/>',
+    phone:'<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>',
+    copy:'<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
+    shield:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/>',
+    checkCircle:'<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/>',
+    battery:'<rect width="16" height="10" x="2" y="7" rx="2" ry="2"/><line x1="22" x2="22" y1="11" y2="13"/><line x1="6" x2="6" y1="11" y2="13"/><line x1="10" x2="10" y1="11" y2="13"/><line x1="14" x2="14" y1="11" y2="13"/>',
+    zap:'<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
+    calendar:'<rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/>',
+    gauge:'<path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/>',
+    arrowRight:'<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
+  };
+  const s=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  s.setAttribute('viewBox','0 0 24 24');s.setAttribute('fill','none');s.setAttribute('stroke','currentColor');
+  s.setAttribute('stroke-width','2');s.setAttribute('stroke-linecap','round');s.setAttribute('stroke-linejoin','round');
+  if(size)s.style.width=size,s.style.height=size;
+  s.innerHTML=icons[name]||'';
+  return s;
+}
+
+// ========== 常量 ==========
+const BRAND_OPTIONS=['雅迪','爱玛','台铃','绿源','新日','小刀','九号','小牛','其他'];
+const CONDITION_OPTIONS=['全新','9成新','8成新','7成新','6成新及以下'];
+const YEARS_OPTIONS=['半年内','1年内','1-2年','2-3年','3年以上'];
+const VOLTAGE_OPTIONS=['48V','60V','72V','其他'];
+const BATTERY_OPTIONS=['锂电池','铅酸电池'];
+const MAX_PRICE=10000;
+const PRICE_PRESETS=[{label:'500以下',min:0,max:500},{label:'500-1000',min:500,max:1000},{label:'1000-2000',min:1000,max:2000},{label:'2000-3000',min:2000,max:3000},{label:'3000以上',min:3000,max:99999}];
+
+const SAMPLE_VEHICLES=[
+  {id:'v1',brand:'雅迪',model:'冠能 E8',price:2899,condition:'9成新',years:'半年内',range:80,voltage:'72V',batteryType:'锂电池',has3C:true,hasPlate:true,frameNumber:'YD20240115001',motorPower:'1200W',image:'',description:'个人一手车，平时上下班代步用，保养很好，电池续航强劲，刹车灵敏，带牌照可直接上路。',createdAt:Date.now()-432000000},
+  {id:'v2',brand:'爱玛',model:'引擎 MAX',price:1680,condition:'8成新',years:'1-2年',range:55,voltage:'60V',batteryType:'铅酸电池',has3C:true,hasPlate:true,frameNumber:'AM20230620023',motorPower:'800W',image:'',description:'外观有轻微使用痕迹，功能一切正常，电瓶刚换过半年，续航稳定，买菜接娃神器。',createdAt:Date.now()-1036800000},
+  {id:'v3',brand:'台铃',model:'豹子 N8',price:999,condition:'7成新',years:'2-3年',range:40,voltage:'60V',batteryType:'铅酸电池',has3C:true,hasPlate:false,motorPower:'600W',image:'',description:'代步用了两年多，车况还行，电池续航约40公里左右，价格实惠，适合短途通勤。',createdAt:Date.now()-2592000000},
+  {id:'v4',brand:'小牛',model:'NQi 青春版',price:3600,condition:'全新',years:'半年内',range:70,voltage:'48V',batteryType:'锂电池',has3C:true,hasPlate:true,frameNumber:'XN20240301007',motorPower:'1000W',image:'',description:'全新未拆封小牛电动车，智能APP联网，锂电池可取出充电，颜值高性能好。',createdAt:Date.now()-172800000},
+  {id:'v5',brand:'绿源',model:'S70',price:2200,condition:'9成新',years:'1年内',range:65,voltage:'72V',batteryType:'铅酸电池',has3C:true,hasPlate:true,frameNumber:'LY20231205045',motorPower:'1000W',image:'',description:'绿源液冷电动车，骑了不到一年，动力强劲，续航持久，原装电池无维修。',createdAt:Date.now()-691200000},
+];
+const DEFAULT_MERCHANT={shopName:'诚信二手电动车行',phone:'13800138000',wechat:'ebike_shop_888',address:'示例街道123号',bio:'专业经营二手电动车十年，品质保证，价格实惠，售后无忧。'};
+const DEFAULT_PASSWORD='123456';
+
+// ========== 存储 ==========
+const K={v:'ebike_vehicles',f:'ebike_favorites',m:'ebike_merchant',p:'ebike_password',i:'ebike_inited'};
+function readJSON(k,fb){try{const r=localStorage.getItem(k);return r==null?fb:JSON.parse(r);}catch(e){return fb;}}
+function writeJSON(k,v){localStorage.setItem(k,JSON.stringify(v));}
+function initData(){
+  if(localStorage.getItem(K.i))return;
+  if(!localStorage.getItem(K.v))writeJSON(K.v,SAMPLE_VEHICLES);
+  if(!localStorage.getItem(K.m))writeJSON(K.m,DEFAULT_MERCHANT);
+  if(!localStorage.getItem(K.p))localStorage.setItem(K.p,DEFAULT_PASSWORD);
+  if(!localStorage.getItem(K.f))writeJSON(K.f,[]);
+  localStorage.setItem(K.i,'1');
+}
+
+// ========== 状态 ==========
+const state={
+  tab:'browse',
+  vehicles:[],favorites:[],merchant:DEFAULT_MERCHANT,
+  filter:{keyword:'',brand:'all',condition:'all',years:'all',range:'all',voltage:'all',cert3c:'all',priceMin:0,priceMax:MAX_PRICE,open:false},
+  admin:{loggedIn:false,accordion:'vehicle'},
+  modal:null,
+};
+
+function loadState(){
+  initData();
+  state.vehicles=readJSON(K.v,SAMPLE_VEHICLES);
+  state.favorites=readJSON(K.f,[]);
+  state.merchant=readJSON(K.m,DEFAULT_MERCHANT);
+}
+function saveVehicles(){writeJSON(K.v,state.vehicles);}
+function saveFavorites(){writeJSON(K.f,state.favorites);}
+function saveMerchant(){writeJSON(K.m,state.merchant);}
+
+// ========== Toast ==========
+let toastSeq=0;
+function toast(msg,type){
+  const id=++toastSeq;
+  const wrap=$('#toastWrap');
+  const t=el('div',{class:'toast toast-'+(type||'default')},msg);
+  wrap.appendChild(t);
+  setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity .3s';setTimeout(()=>t.remove(),300);},2200);
+}
+const Toast={success:m=>toast(m,'success'),error:m=>toast(m,'error'),info:m=>toast(m,'default')};
+
+// ========== 弹窗 ==========
+function showModal(content){
+  closeModal();
+  const mask=el('div',{class:'modal-mask',onclick:e=>{if(e.target===mask)closeModal();}});
+  const modal=el('div',{class:'modal'},content);
+  document.body.appendChild(mask);document.body.appendChild(modal);
+  state.modal={mask,modal};
+}
+function closeModal(){
+  if(state.modal){state.modal.mask.remove();state.modal.modal.remove();state.modal=null;}
+}
+
+// ========== 渲染入口 ==========
+function render(){
+  const app=$('#app');
+  app.innerHTML='';
+  if(state.tab==='browse')app.appendChild(renderBrowse());
+  else if(state.tab==='favorites')app.appendChild(renderFavorites());
+  else if(state.tab==='admin')app.appendChild(renderAdmin());
+  app.appendChild(renderTabBar());
+}
+
+function setTab(t){state.tab=t;window.scrollTo(0,0);render();}
+
+// ========== 底部导航 ==========
+function renderTabBar(){
+  const tabs=[{k:'browse',l:'选车',i:'bike'},{k:'favorites',l:'我的收藏',i:'heart'},{k:'admin',l:'管理后台',i:'settings'}];
+  const nav=el('nav',{class:'tabbar'});
+  const inner=el('div',{class:'tabbar-inner'});
+  tabs.forEach(t=>{
+    const btn=el('button',{class:'tab-item'+(state.tab===t.k?' active':''),onclick:()=>setTab(t.k)},[svgIcon(t.i,'22px'),el('span',{},t.l)]);
+    inner.appendChild(btn);
+  });
+  nav.appendChild(inner);
+  return nav;
+}
+
+// ========== 车辆卡片 ==========
+function renderVehicleCard(v){
+  const isFav=state.favorites.includes(v.id);
+  const card=el('div',{class:'vcard',onclick:()=>showVehicleDetail(v)});
+  // 图片
+  const imgWrap=el('div',{class:'vcard-img'});
+  if(v.image){imgWrap.appendChild(el('img',{src:v.image,alt:v.brand+' '+v.model}));}
+  else{imgWrap.appendChild(el('div',{class:'placeholder'},svgIcon('bike','64px')));}
+  // 收藏按钮
+  const favBtn=el('button',{class:'fav-btn'+(isFav?' on':''),onclick:e=>{e.stopPropagation();toggleFav(v.id);}},[svgIcon('heart','16px')]);
+  imgWrap.appendChild(favBtn);
+  // 3C标
+  if(v.has3C){imgWrap.appendChild(el('div',{class:'badge-3c'},[svgIcon('shield','12px'),' 3C认证']));}
+  card.appendChild(imgWrap);
+  // 内容
+  const body=el('div',{class:'vcard-body'});
+  body.appendChild(el('div',{class:'vcard-title'},v.brand+' '+v.model));
+  const price=el('div',{class:'vcard-price'},[el('span',{class:'yuan'},'￥'),el('span',{class:'num'},v.price.toLocaleString())]);
+  body.appendChild(price);
+  const tags=el('div',{class:'vcard-tags'});
+  [v.condition,'续航'+v.range+'km',v.voltage,v.years].forEach(t=>tags.appendChild(el('span',{class:'badge badge-outline'},t)));
+  body.appendChild(tags);
+  if(v.description)body.appendChild(el('div',{class:'vcard-desc'},v.description));
+  card.appendChild(body);
+  return card;
+}
+
+function toggleFav(id){
+  const idx=state.favorites.indexOf(id);
+  if(idx>=0){state.favorites.splice(idx,1);Toast.success('已取消收藏');}
+  else{state.favorites.push(id);Toast.success('已加入收藏');}
+  saveFavorites();render();
+}
+
+// ========== 车辆详情 ==========
+function showVehicleDetail(v){
+  const m=state.merchant;
+  let showContact=false;
+  const wrap=el('div');
+  // 图片
+  const imgWrap=el('div',{class:'detail-img'});
+  if(v.image)imgWrap.appendChild(el('img',{src:v.image}));
+  else imgWrap.appendChild(el('div',{class:'placeholder',style:'display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);opacity:.4'},svgIcon('bike','80px')));
+  imgWrap.appendChild(el('button',{class:'detail-close',onclick:closeModal},svgIcon('x','18px')));
+  wrap.appendChild(imgWrap);
+  // 内容
+  const body=el('div',{class:'detail-body'});
+  body.appendChild(el('h2',{class:'text-xl font-bold mb-1'},v.brand+' '+v.model));
+  body.appendChild(el('div',{class:'flex items-baseline gap-1 mb-3'},[el('span',{class:'text-sm text-muted'},'￥'),el('span',{class:'detail-price-num'},v.price.toLocaleString())]));
+  // 标签
+  const tags=el('div',{class:'flex flex-wrap gap-2 mb-4'});
+  tags.appendChild(el('span',{class:'badge badge-secondary'},v.condition));
+  tags.appendChild(el('span',{class:'badge badge-outline'},v.voltage));
+  tags.appendChild(el('span',{class:'badge badge-outline'},v.batteryType));
+  if(v.has3C)tags.appendChild(el('span',{class:'badge badge-success'},[svgIcon('shield','12px'),' 3C认证']));
+  if(v.hasPlate)tags.appendChild(el('span',{class:'badge badge-info'},[svgIcon('checkCircle','12px'),' 带牌照']));
+  body.appendChild(tags);
+  // 参数
+  const params=el('div',{class:'detail-params'});
+  const paramItems=[
+    ['gauge','续航',v.range+'km'],['zap','电压',v.voltage],['battery','电池',v.batteryType],['calendar','已用',v.years],
+  ];
+  if(v.motorPower)paramItems.push(['zap','电机',v.motorPower]);
+  if(v.frameNumber)paramItems.push(['','车架号',v.frameNumber]);
+  paramItems.forEach(([icon,lbl,val])=>{
+    const p=el('div',{class:'detail-param'+(icon===''?' style="grid-column:span 2"':'')});
+    if(icon)p.appendChild(svgIcon(icon,'16px'));
+    p.appendChild(el('span',{class:'lbl'},lbl+'：'));
+    p.appendChild(el('span',{class:'val'},val));
+    params.appendChild(p);
+  });
+  body.appendChild(params);
+  // 描述
+  if(v.description){
+    const sec=el('div',{class:'detail-section'});
+    sec.appendChild(el('h3',{},'车况描述'));
+    sec.appendChild(el('div',{class:'detail-desc'},v.description));
+    body.appendChild(sec);
+  }
+  // 商家
+  const mbox=el('div',{class:'merchant-box mt-4'});
+  mbox.appendChild(el('h3',{class:'text-sm font-semibold mb-2'},'商家信息'));
+  mbox.appendChild(el('p',{class:'text-sm font-medium'},m.shopName||'未设置'));
+  if(m.address)mbox.appendChild(el('p',{class:'text-xs text-muted mt-1'},m.address));
+  if(m.bio)mbox.appendChild(el('p',{class:'text-xs text-muted mt-1'},m.bio));
+  body.appendChild(mbox);
+  // 联系
+  const contactArea=el('div');
+  function renderContact(){
+    contactArea.innerHTML='';
+    if(!showContact){
+      contactArea.appendChild(el('button',{class:'btn btn-price btn-lg btn-block mt-4',onclick:()=>{showContact=true;renderContact();}},'我要这辆'));
+    }else{
+      const box=el('div',{class:'contact-box'});
+      box.appendChild(el('p',{class:'contact-tip'},'请直接联系商家看车议价，平台不收取任何费用'));
+      box.appendChild(el('a',{class:'contact-btn',href:'tel:'+m.phone},[svgIcon('phone','16px'),'拨打电话 '+m.phone]));
+      box.appendChild(el('button',{class:'contact-btn secondary',onclick:()=>{
+        if(navigator.clipboard){navigator.clipboard.writeText(m.wechat).then(()=>Toast.success('微信号已复制')).catch(()=>Toast.error('复制失败，请手动复制'));}
+        else Toast.error('复制失败，请手动复制');
+      }},[svgIcon('copy','16px'),'复制微信号 '+m.wechat]));
+      contactArea.appendChild(box);
+    }
+  }
+  renderContact();
+  body.appendChild(contactArea);
+  wrap.appendChild(body);
+  showModal(wrap);
+}
+
+// ========== 选车页 ==========
+function renderBrowse(){
+  const f=state.filter;
+  const page=el('div',{class:'page'});
+  // 头部
+  const header=el('header',{class:'header'});
+  const hc=el('div',{class:'container py-3'});
+  const top=el('div',{class:'flex items-start justify-between'});
+  const titleBox=el('div');
+  titleBox.appendChild(el('h1',{class:'text-lg font-bold'},'二手电动车自助选车'));
+  titleBox.appendChild(el('p',{class:'text-xs text-muted mt-1'},'本地直选 · 无中介费 · 无平台抽成'));
+  top.appendChild(titleBox);
+  top.appendChild(el('button',{class:'btn btn-secondary btn-icon',onclick:showQRModal},svgIcon('qrCode','18px')));
+  hc.appendChild(top);
+  // 搜索
+  const searchWrap=el('div',{class:'relative mt-3',style:'position:relative'});
+  searchWrap.appendChild(el('span',{style:'position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none'},svgIcon('search','16px')));
+  const searchInput=el('input',{class:'input',type:'search',placeholder:'搜索品牌 / 型号关键词',value:f.keyword,style:'padding-left:36px;height:44px;border-radius:12px',oninput:e=>{f.keyword=e.target.value;renderVehicleList();}});
+  searchWrap.appendChild(searchInput);
+  hc.appendChild(searchWrap);
+  // 筛选按钮
+  const filtered=getFilteredVehicles();
+  const filterBtn=el('button',{class:'flex items-center justify-between w-full mt-2 px-2 py-1.5 text-sm text-muted',style:'border-radius:8px',onclick:()=>{f.open=!f.open;render();}});
+  const fbLeft=el('span',{class:'flex items-center gap-2'},[svgIcon('filter','16px'),'筛选条件']);
+  if(filtered.length!==state.vehicles.length){
+    fbLeft.appendChild(el('span',{class:'badge badge-default',style:'height:16px;padding:0 6px;font-size:10px;font-weight:400'},filtered.length+' 辆'));
+  }
+  filterBtn.appendChild(fbLeft);
+  filterBtn.appendChild(el('span',{style:'transition:transform .2s;transform:'+(f.open?'rotate(180deg)':'none')},svgIcon('chevronDown','16px')));
+  hc.appendChild(filterBtn);
+  header.appendChild(hc);
+  page.appendChild(header);
+  // 主体
+  const main=el('main',{class:'container pt-3'});
+  // 筛选面板
+  const panel=el('div',{class:'filter-panel'+(f.open?' expanded':' collapsed')});
+  panel.appendChild(renderFilterPanel());
+  main.appendChild(panel);
+  // 计数
+  main.appendChild(el('div',{class:'flex items-center justify-between mb-3'},el('p',{class:'text-xs text-muted'},['共 ',el('span',{class:'font-semibold'},String(filtered.length)),' 辆符合条件'])));
+  // 列表
+  const listWrap=el('div',{id:'vehicleList'});
+  listWrap.appendChild(renderVehicleListContent(filtered));
+  main.appendChild(listWrap);
+  // 底部提示
+  main.appendChild(el('div',{class:'footer-tip'},'本系统纯前端运行，数据保存在本机浏览器，清除浏览器数据会丢失，请定期导出备份'));
+  page.appendChild(main);
+  return page;
+}
+
+function renderVehicleList(){
+  const wrap=$('#vehicleList');
+  if(!wrap)return;
+  wrap.innerHTML='';
+  wrap.appendChild(renderVehicleListContent(getFilteredVehicles()));
+}
+
+function renderVehicleListContent(list){
+  if(list.length===0){
+    const empty=el('div',{class:'empty'});
+    empty.appendChild(el('div',{class:'empty-icon'},svgIcon('bike','48px')));
+    empty.appendChild(el('p',{class:'text-sm font-medium'},'暂无符合条件的车辆'));
+    empty.appendChild(el('p',{class:'text-xs text-muted mt-1'},'试试调整筛选条件看看'));
+    empty.appendChild(el('button',{class:'btn btn-secondary btn-sm mt-4',onclick:()=>{resetFilter();render();}},'重置筛选'));
+    return empty;
+  }
+  const grid=el('div',{class:'grid grid-2'});
+  list.forEach(v=>grid.appendChild(renderVehicleCard(v)));
+  return grid;
+}
+
+function getFilteredVehicles(){
+  const f=state.filter;
+  return state.vehicles.filter(v=>{
+    if(f.keyword){const kw=f.keyword.toLowerCase();if(!v.brand.toLowerCase().includes(kw)&&!v.model.toLowerCase().includes(kw)&&!(v.description||'').toLowerCase().includes(kw))return false;}
+    if(f.brand!=='all'&&v.brand!==f.brand)return false;
+    if(f.condition!=='all'&&v.condition!==f.condition)return false;
+    if(f.years!=='all'&&v.years!==f.years)return false;
+    if(f.voltage!=='all'&&v.voltage!==f.voltage)return false;
+    if(f.cert3c!=='all'){if(f.cert3c==='yes'&&!v.has3C)return false;if(f.cert3c==='no'&&v.has3C)return false;}
+    if(f.range!=='all'){
+      if(f.range==='0-30'&&v.range>30)return false;
+      if(f.range==='30-50'&&(v.range<=30||v.range>50))return false;
+      if(f.range==='50-80'&&(v.range<=50||v.range>80))return false;
+      if(f.range==='80+'&&v.range<=80)return false;
+    }
+    if(v.price<f.priceMin||v.price>f.priceMax)return false;
+    return true;
+  });
+}
+
+function resetFilter(){
+  state.filter={keyword:'',brand:'all',condition:'all',years:'all',range:'all',voltage:'all',cert3c:'all',priceMin:0,priceMax:MAX_PRICE,open:state.filter.open};
+}
+
+function renderFilterPanel(){
+  const f=state.filter;
+  const box=el('div',{class:'filter-box'});
+  // 品牌
+  box.appendChild(renderFilterTagRow('品牌',['全部',...BRAND_OPTIONS],f.brand,v=>{f.brand=v==='全部'?'all':v;render();}));
+  // 成色
+  box.appendChild(renderFilterTagRow('成色',['全部',...CONDITION_OPTIONS],f.condition,v=>{f.condition=v==='全部'?'all':v;render();}));
+  // 已用年限
+  box.appendChild(renderFilterSelect('已用年限',['全部',...YEARS_OPTIONS],f.years,v=>{f.years=v;renderVehicleList();}));
+  // 续航
+  const rangeOpts=[{v:'all',l:'全部'},{v:'0-30',l:'30km内'},{v:'30-50',l:'30-50km'},{v:'50-80',l:'50-80km'},{v:'80+',l:'80km以上'}];
+  box.appendChild(renderFilterSelectObj('续航里程',rangeOpts,f.range,v=>{f.range=v;renderVehicleList();}));
+  // 电压
+  box.appendChild(renderFilterSelect('电压',['全部',...VOLTAGE_OPTIONS],f.voltage,v=>{f.voltage=v;renderVehicleList();}));
+  // 3C
+  const c3Opts=[{v:'all',l:'全部'},{v:'yes',l:'有3C认证'},{v:'no',l:'无3C认证'}];
+  box.appendChild(renderFilterSelectObj('3C认证',c3Opts,f.cert3c,v=>{f.cert3c=v;renderVehicleList();}));
+  // 价格
+  const priceRow=el('div',{class:'filter-row'});
+  priceRow.appendChild(el('div',{class:'flex items-center justify-between mb-2'},[el('label',{class:'label',style:'margin-bottom:0'},'价格区间'),el('span',{class:'text-xs text-muted tabular'},'￥'+f.priceMin.toLocaleString()+' - ￥'+(f.priceMax>=MAX_PRICE?'不限':f.priceMax.toLocaleString()))]));
+  const slider=el('input',{class:'slider',type:'range',min:'0',max:String(MAX_PRICE),step:'100',value:String(f.priceMax)});
+  slider.addEventListener('input',e=>{f.priceMax=Number(e.target.value);renderVehicleList();const lbl=e.target.parentElement.querySelector('.tabular');if(lbl)lbl.textContent='￥'+f.priceMin.toLocaleString()+' - ￥'+(f.priceMax>=MAX_PRICE?'不限':f.priceMax.toLocaleString());});
+  priceRow.appendChild(slider);
+  const presets=el('div',{class:'filter-tags mt-2'});
+  PRICE_PRESETS.forEach(p=>{
+    presets.appendChild(el('span',{class:'badge badge-outline badge-click',onclick:()=>{f.priceMin=p.min;f.priceMax=p.max;render();}},p.label));
+  });
+  priceRow.appendChild(presets);
+  box.appendChild(priceRow);
+  // 重置
+  box.appendChild(el('button',{class:'btn btn-secondary btn-sm btn-block',onclick:()=>{resetFilter();render();}},[svgIcon('rotateCcw','14px'),' 重置筛选']));
+  return box;
+}
+
+function renderFilterTagRow(label,opts,current,onChange){
+  const row=el('div',{class:'filter-row'});
+  row.appendChild(el('label',{class:'label'},label));
+  const tags=el('div',{class:'filter-tags'});
+  opts.forEach(o=>{
+    const val=o==='全部'?'all':o;
+    tags.appendChild(el('span',{class:'badge '+(current===val?'badge-default':'badge-outline')+' badge-click',onclick:()=>onChange(val)},o));
+  });
+  row.appendChild(tags);
+  return row;
+}
+function renderFilterSelect(label,opts,current,onChange){
+  const row=el('div',{class:'filter-row'});
+  row.appendChild(el('label',{class:'label'},label));
+  const wrap=el('div',{class:'select-wrap'});
+  const sel=el('select',{class:'select'});
+  opts.forEach(o=>{const val=o==='全部'?'all':o;sel.appendChild(el('option',{value:val,selected:current===val?'' :undefined},o));});
+  sel.addEventListener('change',e=>onChange(e.target.value));
+  wrap.appendChild(sel);
+  row.appendChild(wrap);
+  return row;
+}
+function renderFilterSelectObj(label,opts,current,onChange){
+  const row=el('div',{class:'filter-row'});
+  row.appendChild(el('label',{class:'label'},label));
+  const wrap=el('div',{class:'select-wrap'});
+  const sel=el('select',{class:'select'});
+  opts.forEach(o=>{sel.appendChild(el('option',{value:o.v,selected:current===o.v?'' :undefined},o.l));});
+  sel.addEventListener('change',e=>onChange(e.target.value));
+  wrap.appendChild(sel);
+  row.appendChild(wrap);
+  return row;
+}
+
+// ========== 二维码弹窗 ==========
+function showQRModal(){
+  const url=window.location.href;
+  const wrap=el('div',{class:'p-5'});
+  wrap.appendChild(el('div',{class:'text-center mb-1'},el('h3',{class:'text-lg font-semibold'},'扫码看车')));
+  wrap.appendChild(el('p',{class:'text-sm text-muted text-center mb-4'},'扫码分享给顾客，打开即可选车'));
+  const qrBox=el('div',{class:'qr-box'});
+  const qrCode=el('div',{class:'qr-code',id:'qrCodeEl'});
+  qrBox.appendChild(qrCode);
+  wrap.appendChild(qrBox);
+  wrap.appendChild(el('div',{class:'flex items-center justify-center gap-2 text-xs text-muted mt-3'},[svgIcon('qrCode','16px'),el('span',{class:'truncate',style:'max-width:200px'},url)]));
+  const dlBtn=el('button',{class:'btn btn-primary btn-block mt-4',style:'height:44px',onclick:()=>{
+    const canvas=qrCode.querySelector('canvas');
+    if(!canvas){Toast.error('二维码生成中，请稍候');return;}
+    try{
+      const a=document.createElement('a');a.download='看车二维码.png';a.href=canvas.toDataURL('image/png');
+      document.body.appendChild(a);a.click();a.remove();Toast.success('二维码已保存');
+    }catch(e){Toast.error('保存失败，请重试');}
+  }},[svgIcon('download','16px'),' 保存二维码图片']);
+  wrap.appendChild(dlBtn);
+  showModal(wrap);
+  setTimeout(()=>{
+    if(window.QRCode&&qrCode){
+      qrCode.innerHTML='';
+      new QRCode(qrCode,{text:url,width:200,height:200,colorDark:'#0f766e',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.H});
+    }
+  },50);
+}
+
+// ========== 收藏页 ==========
+function renderFavorites(){
+  const page=el('div',{class:'page'});
+  const header=el('header',{class:'header header-plain'});
+  const hc=el('div',{class:'container py-3'});
+  hc.appendChild(el('h1',{class:'text-lg font-bold'},'我的收藏'));
+  hc.appendChild(el('p',{class:'text-xs text-muted mt-1'},['收藏了 ',el('span',{class:'font-semibold'},String(state.favorites.length)),' 辆车']));
+  header.appendChild(hc);page.appendChild(header);
+  const main=el('main',{class:'container pt-3'});
+  const favVehicles=state.vehicles.filter(v=>state.favorites.includes(v.id));
+  if(favVehicles.length===0){
+    const empty=el('div',{class:'empty'});
+    empty.appendChild(el('div',{class:'empty-icon'},svgIcon('heart','48px')));
+    empty.appendChild(el('p',{class:'text-sm font-medium'},'还没有收藏车辆'));
+    empty.appendChild(el('p',{class:'text-xs text-muted mt-1'},'去选车页看看喜欢的车吧'));
+    empty.appendChild(el('button',{class:'btn btn-primary mt-4',onclick:()=>setTab('browse')},['去选车',svgIcon('arrowRight','16px')]));
+    main.appendChild(empty);
+  }else{
+    const grid=el('div',{class:'grid grid-2'});
+    favVehicles.forEach(v=>grid.appendChild(renderVehicleCard(v)));
+    main.appendChild(grid);
+  }
+  main.appendChild(el('div',{class:'footer-tip'},'本系统纯前端运行，数据保存在本机浏览器，清除浏览器数据会丢失，请定期导出备份'));
+  page.appendChild(main);
+  return page;
+}
+
+// ========== 管理后台 ==========
+function renderAdmin(){
+  if(!state.admin.loggedIn)return renderAdminLogin();
+  return renderAdminPanel();
+}
+
+function renderAdminLogin(){
+  const page=el('div',{class:'page'});
+  const wrap=el('div',{class:'login-wrap'});
+  const box=el('div',{class:'login-box'});
+  box.appendChild(el('div',{class:'login-icon'},svgIcon('bike','32px')));
+  box.appendChild(el('h1',{class:'login-title'},'管理后台'));
+  box.appendChild(el('p',{class:'login-sub'},'请输入管理密码以进入后台'));
+  const form=el('form');
+  const pwdWrap=el('div',{class:'login-pwd-wrap'});
+  let showPwd=false;
+  const pwdInput=el('input',{type:'password',class:'input',placeholder:'请输入管理密码',autofocus:''});
+  const eyeBtn=el('button',{type:'button',class:'login-eye',onclick:()=>{showPwd=!showPwd;pwdInput.type=showPwd?'text':'password';}},svgIcon('eye','16px'));
+  pwdWrap.appendChild(pwdInput);pwdWrap.appendChild(eyeBtn);
+  form.appendChild(pwdWrap);
+  form.appendChild(el('button',{type:'submit',class:'btn btn-primary btn-lg btn-block',style:'font-size:16px'},'进入后台'));
+  form.addEventListener('submit',e=>{
+    e.preventDefault();
+    if(localStorage.getItem(K.p)===pwdInput.value){state.admin.loggedIn=true;Toast.success('登录成功');render();}
+    else Toast.error('密码错误，请重试');
+  });
+  box.appendChild(form);
+  box.appendChild(el('p',{class:'login-hint'},'默认密码：123456（可在后台修改）'));
+  wrap.appendChild(box);page.appendChild(wrap);
+  return page;
+}
+
+function renderAdminPanel(){
+  const page=el('div',{class:'page'});
+  // 头部
+  const header=el('header',{class:'header header-plain'});
+  const hc=el('div',{class:'container py-3 flex items-center justify-between'});
+  const left=el('div');
+  left.appendChild(el('h1',{class:'text-lg font-bold'},'管理后台'));
+  left.appendChild(el('p',{class:'text-xs text-muted mt-1'},state.merchant.shopName||'未设置店铺'));
+  hc.appendChild(left);
+  hc.appendChild(el('button',{class:'btn btn-ghost btn-sm text-muted',onclick:()=>{state.admin.loggedIn=false;render();Toast.success('已退出管理后台');}},[svgIcon('logout','14px'),' 退出']));
+  header.appendChild(hc);page.appendChild(header);
+  // 主体
+  const main=el('main',{class:'container py-4'});
+  main.style.display='flex';main.style.flexDirection='column';main.style.gap='16px';
+  // 车辆管理
+  main.appendChild(renderAdminVehicleSection());
+  // 商家信息
+  main.appendChild(renderAccordion('merchant','商家信息设置','store',renderAdminMerchantForm()));
+  // 数据管理
+  main.appendChild(renderAccordion('data','数据管理','database',renderAdminDataSection()));
+  // 修改密码
+  main.appendChild(renderAccordion('password','修改管理密码','key',el('button',{class:'btn btn-secondary btn-sm btn-block justify-start',style:'height:36px',onclick:showPasswordModal},[svgIcon('key','16px'),' 修改密码'])));
+  main.appendChild(el('div',{class:'footer-tip'},'本系统纯前端运行，数据保存在本机浏览器，清除浏览器数据会丢失，请定期导出备份'));
+  page.appendChild(main);
+  return page;
+}
+
+function renderAdminVehicleSection(){
+  const wrap=el('div');
+  const head=el('div',{class:'flex items-center justify-between mb-3'});
+  head.appendChild(el('h2',{class:'text-base font-semibold flex items-center gap-2'},[svgIcon('bike','16px'),' 车辆管理 ',el('span',{class:'badge badge-secondary',style:'font-size:12px;font-weight:400'},state.vehicles.length+' 辆')]));
+  head.appendChild(el('button',{class:'btn btn-primary btn-sm',onclick:()=>showVehicleForm(null)},[svgIcon('plus','14px'),' 添加车辆']));
+  wrap.appendChild(head);
+  const card=el('div',{class:'card overflow-hidden'});
+  if(state.vehicles.length===0){
+    card.appendChild(el('div',{style:'padding:40px;text-align:center'},[svgIcon('bike','32px'),el('p',{class:'text-sm text-muted mt-2'},'暂无车辆，点击上方按钮添加')]));
+  }else{
+    const list=el('div',{class:'divide-y'});
+    state.vehicles.forEach(v=>{
+      const item=el('div',{class:'admin-item'});
+      const thumb=el('div',{class:'admin-thumb'});
+      if(v.image)thumb.appendChild(el('img',{src:v.image}));else thumb.appendChild(svgIcon('bike','24px'));
+      item.appendChild(thumb);
+      const info=el('div',{class:'admin-info'});
+      info.appendChild(el('p',{class:'admin-name'},v.brand+' '+v.model));
+      info.appendChild(el('p',{class:'admin-price'},'￥'+v.price.toLocaleString()));
+      item.appendChild(info);
+      const actions=el('div',{class:'admin-actions'});
+      actions.appendChild(el('button',{class:'btn btn-ghost btn-icon text-muted',onclick:()=>showVehicleForm(v)},svgIcon('edit2','16px')));
+      actions.appendChild(el('button',{class:'btn btn-ghost btn-icon text-muted',style:'color:var(--muted)',onclick:()=>showDeleteConfirm(v)},svgIcon('trash2','16px')));
+      item.appendChild(actions);
+      list.appendChild(item);
+    });
+    card.appendChild(list);
+  }
+  wrap.appendChild(card);
+  return wrap;
+}
+
+function renderAccordion(key,title,icon,content){
+  const isOpen=state.admin.accordion===key;
+  const wrap=el('div',{class:'card px-4'});
+  const item=el('div',{class:'accordion'+(isOpen?' open':'')});
+  const head=el('button',{class:'accordion-head',onclick:()=>{state.admin.accordion=isOpen?'':key;render();}});
+  head.appendChild(el('span',{class:'flex items-center gap-2'},[svgIcon(icon,'16px'),title]));
+  head.appendChild(el('span',{class:'accordion-chevron'},svgIcon('chevronDown','16px')));
+  item.appendChild(head);
+  const body=el('div',{class:'accordion-body',style:'max-height:'+(isOpen?'1000px':'0')});
+  const inner=el('div',{style:'padding-bottom:16px'});
+  inner.appendChild(content);
+  body.appendChild(inner);
+  item.appendChild(body);
+  wrap.appendChild(item);
+  return wrap;
+}
+
+function renderAdminMerchantForm(){
+  const m={...state.merchant};
+  const wrap=el('div',{style:'display:flex;flex-direction:column;gap:12px'});
+  const fields=[['shopName','店铺名称'],['phone','联系电话'],['wechat','微信号'],['address','店铺地址']];
+  fields.forEach(([k,l])=>{
+    const row=el('div');
+    row.appendChild(el('label',{class:'label'},l));
+    const inp=el('input',{class:'input',value:m[k]||''});
+    inp.addEventListener('input',e=>m[k]=e.target.value);
+    row.appendChild(inp);wrap.appendChild(row);
+  });
+  const bioRow=el('div');
+  bioRow.appendChild(el('label',{class:'label'},'店铺简介'));
+  const bio=el('textarea',{class:'textarea',rows:'3'});bio.value=m.bio||'';
+  bio.addEventListener('input',e=>m.bio=e.target.value);
+  bioRow.appendChild(bio);wrap.appendChild(bioRow);
+  wrap.appendChild(el('button',{class:'btn btn-primary btn-sm btn-block',onclick:()=>{
+    if(!m.shopName.trim()){Toast.error('请填写店铺名称');return;}
+    state.merchant={...m};saveMerchant();Toast.success('商家信息已保存');
+  }},[svgIcon('check','14px'),' 保存商家信息']));
+  return wrap;
+}
+
+function renderAdminDataSection(){
+  const wrap=el('div',{style:'display:flex;flex-direction:column;gap:8px'});
+  // 导出
+  wrap.appendChild(el('button',{class:'btn btn-secondary btn-sm btn-block justify-start',style:'height:36px',onclick:()=>{
+    const data={vehicles:state.vehicles,merchant:state.merchant};
+    const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+    a.download='电动车数据_'+new Date().toISOString().slice(0,10)+'.json';
+    document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(a.href);
+    Toast.success('数据已导出');
+  }},[svgIcon('download','16px'),' 导出数据']));
+  // 导入
+  const fileInput=el('input',{type:'file',accept:'.json',style:'display:none'});
+  fileInput.addEventListener('change',e=>{
+    const file=e.target.files[0];if(!file)return;
+    const reader=new FileReader();
+    reader.onload=()=>{
+      try{
+        const data=JSON.parse(reader.result);
+        if(!data.vehicles&&!data.merchant){Toast.error('文件格式不正确');return;}
+        showImportConfirm(data);
+      }catch(err){Toast.error('文件解析失败，请检查JSON格式');}
+    };
+    reader.readAsText(file);e.target.value='';
+  });
+  wrap.appendChild(fileInput);
+  wrap.appendChild(el('button',{class:'btn btn-secondary btn-sm btn-block justify-start',style:'height:36px',onclick:()=>fileInput.click()},[svgIcon('upload','16px'),' 导入数据']));
+  // 重置示例
+  wrap.appendChild(el('button',{class:'btn btn-secondary btn-sm btn-block justify-start',style:'height:36px',onclick:()=>showResetConfirm()},[svgIcon('rotateCcw','16px'),' 重置为示例数据']));
+  // 清空
+  wrap.appendChild(el('button',{class:'btn btn-destructive btn-sm btn-block justify-start',style:'height:36px',onclick:()=>showClearConfirm()},[svgIcon('trash2','16px'),' 清空所有数据']));
+  return wrap;
+}
+
+// ========== 车辆表单弹窗 ==========
+function showVehicleForm(v){
+  const isEdit=!!v;
+  const form=v?{...v}:{brand:'雅迪',model:'',price:0,condition:'9成新',years:'1年内',range:50,voltage:'60V',batteryType:'铅酸电池',has3C:true,hasPlate:false,frameNumber:'',motorPower:'',image:'',description:''};
+  let brandOther='';
+  if(isEdit&&!BRAND_OPTIONS.filter(b=>b!=='其他').includes(v.brand)){brandOther=v.brand;form.brand='其他';}
+  const wrap=el('div',{class:'p-5'});
+  wrap.appendChild(el('h3',{class:'text-base font-semibold mb-3'},isEdit?'编辑车辆':'添加车辆'));
+  const body=el('div',{style:'display:flex;flex-direction:column;gap:12px;max-height:60vh;overflow-y:auto'});
+  // 品牌
+  const brandRow=el('div');
+  brandRow.appendChild(el('label',{class:'label'},'品牌'));
+  const brandWrap=el('div',{class:'select-wrap'});
+  const brandSel=el('select',{class:'select'});
+  BRAND_OPTIONS.forEach(b=>brandSel.appendChild(el('option',{value:b,selected:form.brand===b?'' :undefined},b)));
+  brandSel.addEventListener('change',e=>{form.brand=e.target.value;render();});
+  brandWrap.appendChild(brandSel);brandRow.appendChild(brandWrap);
+  const brandOtherInput=el('input',{class:'input mt-2',placeholder:'请输入品牌名称',value:brandOther,style:form.brand==='其他'?'':'display:none'});
+  brandOtherInput.addEventListener('input',e=>brandOther=e.target.value);
+  brandRow.appendChild(brandOtherInput);
+  // 监听品牌变化显示/隐藏其他输入
+  brandSel.addEventListener('change',e=>{brandOtherInput.style.display=e.target.value==='其他'?'':'none';});
+  body.appendChild(brandRow);
+  // 型号
+  body.appendChild(renderFormField('型号名称 *','text',form.model,v=>form.model=v));
+  // 价格
+  body.appendChild(renderFormField('价格（元）*','number',form.price||'',v=>form.price=Number(v)||0));
+  // 成色+年限
+  const grid2a=el('div',{class:'grid grid-2'});
+  grid2a.appendChild(renderFormSelect('成色',CONDITION_OPTIONS,form.condition,v=>form.condition=v));
+  grid2a.appendChild(renderFormSelect('已用年限',YEARS_OPTIONS,form.years,v=>form.years=v));
+  body.appendChild(grid2a);
+  // 续航+电压
+  const grid2b=el('div',{class:'grid grid-2'});
+  grid2b.appendChild(renderFormField('续航（km）','number',form.range||'',v=>form.range=Number(v)||0));
+  grid2b.appendChild(renderFormSelect('电压',VOLTAGE_OPTIONS,form.voltage,v=>form.voltage=v));
+  body.appendChild(grid2b);
+  // 电池
+  body.appendChild(renderFormSelect('电池类型',BATTERY_OPTIONS,form.batteryType,v=>form.batteryType=v));
+  // 开关
+  body.appendChild(renderFormSwitch('有3C认证',form.has3C,v=>form.has3C=v));
+  body.appendChild(renderFormSwitch('带牌照',form.hasPlate,v=>form.hasPlate=v));
+  // 车架号
+  body.appendChild(renderFormField('车架号（选填）','text',form.frameNumber||'',v=>form.frameNumber=v));
+  // 电机
+  body.appendChild(renderFormField('电机功率（选填）','text',form.motorPower||'',v=>form.motorPower=v));
+  // 图片
+  const imgRow=el('div');
+  imgRow.appendChild(el('label',{class:'label flex items-center gap-1'},[svgIcon('image','12px'),' 车辆图片 URL（选填）']));
+  const imgInput=el('input',{class:'input',placeholder:'粘贴图片链接',value:form.image||''});
+  imgInput.addEventListener('input',e=>form.image=e.target.value);
+  imgRow.appendChild(imgInput);
+  imgRow.appendChild(el('p',{class:'text-xs text-muted mt-1'},'建议上传至免费图床后粘贴链接，留空则显示默认电动车图标'));
+  body.appendChild(imgRow);
+  // 描述
+  const descRow=el('div');
+  descRow.appendChild(el('label',{class:'label'},'车况描述'));
+  const descArea=el('textarea',{class:'textarea',rows:'4',placeholder:'描述车辆状况、历史、特色等'});
+  descArea.value=form.description||'';
+  descArea.addEventListener('input',e=>form.description=e.target.value);
+  descRow.appendChild(descArea);
+  body.appendChild(descRow);
+  wrap.appendChild(body);
+  // 按钮
+  const btnRow=el('div',{class:'flex gap-2 mt-4'});
+  btnRow.appendChild(el('button',{class:'btn btn-secondary flex-1',onclick:closeModal},'取消'));
+  btnRow.appendChild(el('button',{class:'btn btn-primary flex-1',onclick:()=>{
+    if(!form.model.trim()){Toast.error('请填写型号名称');return;}
+    if(form.price<=0){Toast.error('请填写有效价格');return;}
+    const finalBrand=form.brand==='其他'?(brandOther.trim()||'其他'):form.brand;
+    const data={...form,brand:finalBrand};
+    if(isEdit){
+      const idx=state.vehicles.findIndex(x=>x.id===v.id);
+      if(idx>=0){state.vehicles[idx]={...state.vehicles[idx],...data};saveVehicles();Toast.success('车辆信息已更新');}
+    }else{
+      data.id='v_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
+      data.createdAt=Date.now();
+      state.vehicles.unshift(data);saveVehicles();Toast.success('车辆添加成功');
+    }
+    closeModal();render();
+  }},isEdit?'保存修改':'添加车辆'));
+  wrap.appendChild(btnRow);
+  showModal(wrap);
+}
+
+function renderFormField(label,type,value,onChange){
+  const row=el('div');
+  row.appendChild(el('label',{class:'label'},label));
+  const inp=el('input',{class:'input',type:type,value:value});
+  inp.addEventListener('input',e=>onChange(e.target.value));
+  row.appendChild(inp);return row;
+}
+function renderFormSelect(label,opts,current,onChange){
+  const row=el('div');
+  row.appendChild(el('label',{class:'label'},label));
+  const wrap=el('div',{class:'select-wrap'});
+  const sel=el('select',{class:'select'});
+  opts.forEach(o=>sel.appendChild(el('option',{value:o,selected:current===o?'' :undefined},o)));
+  sel.addEventListener('change',e=>onChange(e.target.value));
+  wrap.appendChild(sel);row.appendChild(wrap);return row;
+}
+function renderFormSwitch(label,checked,onChange){
+  const row=el('div',{class:'flex items-center justify-between px-3 py-2.5 rounded-lg border',style:'border-color:var(--border)'});
+  row.appendChild(el('label',{class:'label',style:'margin-bottom:0;cursor:pointer'},label));
+  const sw=el('div',{class:'switch'+(checked?' on':''),onclick:()=>{const nv=!checked;sw.classList.toggle('on',nv);onChange(nv);}});
+  sw.appendChild(el('div',{class:'switch-dot'}));
+  row.appendChild(sw);return row;
+}
+
+// ========== 确认弹窗 ==========
+function showConfirm(title,msg,onConfirm,danger){
+  const wrap=el('div',{class:'p-5'});
+  wrap.appendChild(el('h3',{class:'text-base font-semibold flex items-center gap-2',style:danger?'color:var(--destructive)':'color:var(--primary)'},[svgIcon(danger?'alertTriangle':'rotateCcw','20px'),title]));
+  wrap.appendChild(el('p',{class:'text-sm text-muted mt-2'},msg));
+  const btnRow=el('div',{class:'flex gap-2 mt-4'});
+  btnRow.appendChild(el('button',{class:'btn btn-secondary flex-1',onclick:closeModal},'取消'));
+  btnRow.appendChild(el('button',{class:'btn '+(danger?'btn-destructive':'btn-primary')+' flex-1',onclick:()=>{onConfirm();closeModal();render();}},'确认'));
+  wrap.appendChild(btnRow);
+  showModal(wrap);
+}
+function showDeleteConfirm(v){showConfirm('确认删除','确定要删除「'+v.brand+' '+v.model+'」吗？此操作不可撤销。',()=>{state.vehicles=state.vehicles.filter(x=>x.id!==v.id);state.favorites=state.favorites.filter(f=>f!==v.id);saveVehicles();saveFavorites();Toast.success('已删除');},true);}
+function showClearConfirm(){showConfirm('清空所有数据','此操作将清除所有车辆、商家信息和收藏数据，且不可恢复。确定继续吗？',()=>{state.vehicles=[];state.favorites=[];state.merchant={shopName:'',phone:'',wechat:'',address:'',bio:''};saveVehicles();saveFavorites();saveMerchant();Toast.success('所有数据已清空');},true);}
+function showResetConfirm(){showConfirm('重置为示例数据','此操作将覆盖当前所有车辆和商家数据，替换为示例数据。确定继续吗？',()=>{state.vehicles=JSON.parse(JSON.stringify(SAMPLE_VEHICLES));state.merchant={...DEFAULT_MERCHANT};state.favorites=[];saveVehicles();saveMerchant();saveFavorites();Toast.success('已重置为示例数据');},false);}
+function showImportConfirm(data){showConfirm('确认导入','导入将覆盖现有车辆和商家数据，确定继续吗？包含 '+(data.vehicles?.length||0)+' 条车辆数据。',()=>{if(data.vehicles){state.vehicles=data.vehicles;saveVehicles();}if(data.merchant){state.merchant=data.merchant;saveMerchant();}Toast.success('导入成功');},false);}
+
+// ========== 修改密码弹窗 ==========
+function showPasswordModal(){
+  let oldPwd='',newPwd='',confirmPwd='';
+  const wrap=el('div',{class:'p-5'});
+  wrap.appendChild(el('h3',{class:'text-base font-semibold flex items-center gap-2 mb-4'},[svgIcon('key','20px'),'修改管理密码']));
+  const body=el('div',{style:'display:flex;flex-direction:column;gap:12px'});
+  const oldInp=el('input',{type:'password',class:'input',placeholder:'请输入旧密码'});oldInp.addEventListener('input',e=>oldPwd=e.target.value);
+  const newInp=el('input',{type:'password',class:'input',placeholder:'至少4位'});newInp.addEventListener('input',e=>newPwd=e.target.value);
+  const confInp=el('input',{type:'password',class:'input',placeholder:'再次输入新密码'});confInp.addEventListener('input',e=>confirmPwd=e.target.value);
+  body.appendChild(el('div',[el('label',{class:'label'},'旧密码'),oldInp]));
+  body.appendChild(el('div',[el('label',{class:'label'},'新密码'),newInp]));
+  body.appendChild(el('div',[el('label',{class:'label'},'确认新密码'),confInp]));
+  wrap.appendChild(body);
+  const btnRow=el('div',{class:'flex gap-2 mt-4'});
+  btnRow.appendChild(el('button',{class:'btn btn-secondary flex-1',onclick:closeModal},'取消'));
+  btnRow.appendChild(el('button',{class:'btn btn-primary flex-1',onclick:()=>{
+    if(localStorage.getItem(K.p)!==oldPwd){Toast.error('旧密码错误');return;}
+    if(!newPwd||newPwd.length<4){Toast.error('新密码至少4位');return;}
+    if(newPwd!==confirmPwd){Toast.error('两次输入的新密码不一致');return;}
+    localStorage.setItem(K.p,newPwd);Toast.success('密码修改成功');closeModal();
+  }},'确认修改'));
+  wrap.appendChild(btnRow);
+  showModal(wrap);
+}
+
+// ========== 启动 ==========
+loadState();
+render();
+</script>
+</body>
+</html>
